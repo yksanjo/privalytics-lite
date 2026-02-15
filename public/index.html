@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privalytics Lite</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0d1117; --surface: #21262d; --border: #30363d;
+      --text: #e6edf3; --text-secondary: #8b949e; --accent: #58a6ff;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); padding: 40px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    .subtitle { color: var(--text-secondary); margin-bottom: 32px; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; text-align: center; }
+    .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 48px; font-weight: 600; }
+    .stat-label { color: var(--text-secondary); font-size: 14px; margin-top: 8px; }
+    .add-site { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+    .add-site h3 { margin-bottom: 16px; }
+    input { width: 100%; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); margin-bottom: 12px; font-size: 14px; }
+    input:focus { outline: none; border-color: var(--accent); }
+    button { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 6px; color: white; font-size: 14px; font-weight: 600; cursor: pointer; }
+    button:hover { opacity: 0.9; }
+    .sites { margin-top: 24px; }
+    .site { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .site-name { font-weight: 600; }
+    .site-domain { color: var(--text-secondary); font-size: 12px; }
+    .site-stats { text-align: right; }
+    .site-visitors { font-family: 'JetBrains Mono', monospace; font-size: 18px; }
+    .site-label { font-size: 11px; color: var(--text-secondary); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 Privalytics Lite</h1>
+    <p class="subtitle">Minimal privacy-first analytics</p>
+    
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="totalVisitors">0</div>
+        <div class="stat-label">Total Visitors</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="totalViews">0</div>
+        <div class="stat-label">Total Views</div>
+      </div>
+    </div>
+
+    <div class="add-site">
+      <h3>Add New Site</h3>
+      <input type="text" id="siteName" placeholder="Site name (e.g., My Blog)">
+      <input type="text" id="siteDomain" placeholder="Domain (e.g., myblog.com)">
+      <button onclick="addSite()">Add Site</button>
+    </div>
+
+    <div class="sites" id="sitesList"></div>
+  </div>
+
+  <script>
+    let sites = [];
+    
+    async function loadSites() {
+      const res = await fetch('/api/sites');
+      sites = await res.json();
+      renderSites();
+      if (sites.length > 0) loadStats(sites[0].id);
+    }
+
+    async function addSite() {
+      const name = document.getElementById('siteName').value;
+      const domain = document.getElementById('siteDomain').value;
+      if (!name || !domain) return;
+      
+      await fetch('/api/sites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, domain })
+      });
+      
+      document.getElementById('siteName').value = '';
+      document.getElementById('siteDomain').value = '';
+      loadSites();
+    }
+
+    async function loadStats(siteId) {
+      const res = await fetch(`/api/sites/${siteId}/stats`);
+      const stats = await res.json();
+      document.getElementById('totalVisitors').textContent = stats.visitors;
+      document.getElementById('totalViews').textContent = stats.views;
+    }
+
+    function renderSites() {
+      const list = document.getElementById('sitesList');
+      list.innerHTML = sites.map(site => `
+        <div class="site" onclick="loadStats('${site.id}')">
+          <div>
+            <div class="site-name">${site.name}</div>
+            <div class="site-domain">${site.domain}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    loadSites();
+  </script>
+</body>
+</html>
